@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earth 3D Map - Explore the World</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.95/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.95/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    
+    <div id="toolbar">
+        <select id="mapStyle">
+            <option value="satellite" selected>Satellite</option>
+            <option value="terrain">Terrain</option>
+        </select>
+        <select id="languageSelector">
+            <option value="en" selected>English</option>
+            <option value="fr">Français</option>
+            <option value="ar">العربية</option>
+        </select>
+    </div>
+    
+    <div id="layerControl">
+        <h4>Layers</h4>
+        <label><input type="checkbox" id="toggleBorders" checked> Country Borders</label>
+        <label><input type="checkbox" id="toggleLabels" checked> Country Labels</label>
+        <label><input type="checkbox" id="toggleCities" checked> City Labels</label>
+        <div class="slider-control">
+            <label>Imagery Opacity</label>
+            <input type="range" id="imageryOpacity" min="0" max="100" value="100">
+            <span id="opacityValue">100%</span>
+        </div>
+    </div>
+    
+    <div id="bookmarksPanel">
+        <h4>Bookmarks</h4>
+        <button id="saveViewBtn">💾 Save Current View</button>
+        <div id="bookmarksList"></div>
+    </div>
+    
+    <div id="loadingScreen" class="loading-active">
+        <div class="loading-container">
+            <div class="earth-loader">
+                <div class="earth-sphere">
+                    <div class="earth-glow"></div>
+                </div>
+                <div class="loading-ring"></div>
+            </div>
+            <h2>Loading Earth 3D Map</h2>
+            <p class="loading-status">Initializing Cesium viewer...</p>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <p class="loading-text">Fetching satellite imagery, borders, and terrain data</p>
+        </div>
+    </div>
+    
+    <div id="cesiumContainer"></div>
+    
+    <div id="infoPanel" class="hidden">
+        <div id="infoPanelContent">
+            <button id="closeInfoPanel">&times;</button>
+            <h3 id="locationTitle"></h3>
+            <p id="locationDescription"></p>
+            <div id="locationDetails"></div>
+        </div>
+    </div>
+    
+    <div id="energySidePanel">
+        <h3 id="panelTitle">Tunisia Energy Data</h3>
+        <div id="countrySelector">
+            <label for="energyCountry">Country: </label>
+            <select id="energyCountry">
+                <option value="tunisia" selected>Tunisia</option>
+                <option value="algeria">Algeria</option>
+                <option value="morocco">Morocco</option>
+                <option value="libya">Libya</option>
+            </select>
+        </div>
+        <div id="yearSelector">
+            <label for="energyYear">Year: </label>
+            <select id="energyYear"></select>
+        </div>
+        <div id="timeControls">
+            <button id="playBtn" title="Play animation">▶</button>
+            <button id="pauseBtn" title="Pause animation" style="display:none;">⏸</button>
+            <input type="range" id="yearSlider" min="2000" max="2035" value="2025" step="1">
+            <span id="sliderYear">2025</span>
+        </div>
+        <button id="toggleMapViz" class="viz-toggle-btn">📊 Show Map Visualization</button>
+        
+        <!-- AI Prediction Info -->
+        <div id="predictionInfo" style="display:none; margin: 12px 0; padding: 10px; background: rgba(0, 255, 255, 0.1); border: 1px solid rgba(0, 255, 255, 0.3); border-radius: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <strong style="color: #00ffff; font-size: 11px;">AI PREDICTION MODEL</strong>
+            </div>
+            <p style="font-size: 9px; color: #94a3b8; margin: 0 0 8px 0; line-height: 1.4;">
+                <strong>Deterministic mathematical projections</strong> based on historical trends, growth rates, and field-specific models. No randomness - results are consistent and reproducible.
+            </p>
+            <div style="font-size: 8px; color: #64748b; margin-bottom: 8px; padding: 6px; background: rgba(0, 0, 0, 0.2); border-radius: 3px;">
+                <strong style="color: #94a3b8;">Models Used:</strong><br>
+                • Linear Regression (trend analysis)<br>
+                • Exponential Growth (recent momentum)<br>
+                • Logistic S-Curve (renewable adoption)<br>
+                • Hubbert Curve (resource depletion)<br>
+                • Correlation Models (CO2, Investment)
+            </div>
+            <button id="refreshPredictionBtn" style="width: 100%; padding: 6px; background: rgba(0, 255, 255, 0.15); border: 1px solid rgba(0, 255, 255, 0.4); border-radius: 4px; color: #00ffff; font-size: 10px; cursor: pointer; transition: all 0.2s;">
+                🔄 Recalculate Predictions
+            </button>
+            <div style="margin-top: 8px; font-size: 8px; color: #64748b;">
+                Calculated: <span id="predictionTimestamp">--:--:--</span>
+            </div>
+        </div>
+        
+        <!-- Inline Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">POPULATION</div>
+                <div class="stat-value" id="stat-population">-</div>
+                <div class="stat-unit">million</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">GDP</div>
+                <div class="stat-value" id="stat-gdp">-</div>
+                <div class="stat-unit">billion USD</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ENERGY CONSUMPTION</div>
+                <div class="stat-value" id="stat-consumption">-</div>
+                <div class="stat-unit">MTEP</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">OIL PRODUCTION</div>
+                <div class="stat-value" id="stat-oil">-</div>
+                <div class="stat-unit">M barrels</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">GAS PRODUCTION</div>
+                <div class="stat-value" id="stat-gas">-</div>
+                <div class="stat-unit">billion m³</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ELECTRICITY PRODUCTION</div>
+                <div class="stat-value" id="stat-electricity">-</div>
+                <div class="stat-unit">TWh</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">RENEWABLE ENERGY SHARE</div>
+                <div class="stat-value" id="stat-renewable">-</div>
+                <div class="stat-unit">%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">OIL RESERVES</div>
+                <div class="stat-value" id="stat-oilReserves">-</div>
+                <div class="stat-unit">M barrels</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">GAS RESERVES</div>
+                <div class="stat-value" id="stat-gasReserves">-</div>
+                <div class="stat-unit">billion m³</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ENERGY IMPORTS</div>
+                <div class="stat-value" id="stat-energyImports">-</div>
+                <div class="stat-unit">MTEP</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">ENERGY EXPORTS</div>
+                <div class="stat-value" id="stat-energyExports">-</div>
+                <div class="stat-unit">MTEP</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">CO2 EMISSIONS</div>
+                <div class="stat-value" id="stat-co2">-</div>
+                <div class="stat-unit">M tonnes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">INVESTMENT</div>
+                <div class="stat-value" id="stat-investment">-</div>
+                <div class="stat-unit">million USD</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="mapVisualization" class="hidden">
+        <div class="viz-header">
+            <h3>Tunisia Energy Overview <span id="vizYear">2025</span></h3>
+            <button id="closeMapViz">&times;</button>
+        </div>
+        <div class="viz-grid">
+            <div class="viz-card">
+                <div class="viz-title">Energy Production</div>
+                <canvas id="productionChart" width="120" height="90"></canvas>
+            </div>
+            <div class="viz-card">
+                <div class="viz-title">Renewable Transition</div>
+                <canvas id="renewableChart" width="120" height="90"></canvas>
+            </div>
+            <div class="viz-card">
+                <div class="viz-title">Energy Balance</div>
+                <canvas id="balanceChart" width="120" height="90"></canvas>
+            </div>
+            <div class="viz-card">
+                <div class="viz-title">Economic Indicators</div>
+                <div class="indicator-group">
+                    <div class="indicator-item">
+                        <span class="indicator-label">Population</span>
+                        <span class="indicator-value" id="vizPop">-</span>
+                        <span class="indicator-trend" id="trendPop"></span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-label">GDP</span>
+                        <span class="indicator-value" id="vizGDP">-</span>
+                        <span class="indicator-trend" id="trendGDP"></span>
+                    </div>
+                    <div class="indicator-item">
+                        <span class="indicator-label">Investment</span>
+                        <span class="indicator-value" id="vizInvest">-</span>
+                        <span class="indicator-trend" id="trendInvest"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="vizCarousel" class="carousel-container">
+        <button id="carouselPrev" class="carousel-btn carousel-prev">❮</button>
+        <div class="carousel-track" id="carouselTrack"></div>
+        <button id="carouselNext" class="carousel-btn carousel-next">❯</button>
+        <div class="carousel-dots"></div>
+    </div>
+    
+    <div id="heatmapPanel">
+        <h4>🔥 Data Heatmap</h4>
+        
+        <div id="countryMultiSelect" style="margin-bottom: 14px;">
+            <label><strong>Select Countries:</strong></label>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                <label><input type="checkbox" id="tunisiaCheck" data-country="tunisia" checked> Tunisia</label>
+                <label><input type="checkbox" id="algeriaCheck" data-country="algeria"> Algeria</label>
+                <label><input type="checkbox" id="moroccoCheck" data-country="morocco"> Morocco</label>
+                <label><input type="checkbox" id="libyaCheck" data-country="libya"> Libya</label>
+            </div>
+        </div>
+        
+        <div id="metricSelector">
+            <label for="metricSelect"><strong>Select Metric:</strong></label>
+            <select id="metricSelect" style="width: 100%; padding: 8px; margin-top: 6px; background: rgba(30, 41, 59, 0.8); color: white; border: 1px solid rgba(71, 85, 105, 0.3); border-radius: 5px;">
+                <option value="population">Population</option>
+                <option value="gdp">GDP</option>
+                <option value="energyConsumption">Energy Consumption</option>
+                <option value="oilProduction">Oil Production</option>
+                <option value="gasProduction">Gas Production</option>
+                <option value="electricityProduction">Electricity Production</option>
+                <option value="renewableShare">Renewable Share %</option>
+                <option value="co2Emissions">CO2 Emissions</option>
+            </select>
+        </div>
+        
+        <div id="heatmapOpacity" style="margin-top: 12px;">
+            <label for="heatmapOpacitySlider"><strong>Opacity:</strong></label>
+            <input type="range" id="heatmapOpacitySlider" min="0" max="100" value="70" style="width: 100%; margin-top: 6px;">
+            <span id="heatmapOpacityValue" style="font-size: 11px; color: #4fc3f7;">70%</span>
+        </div>
+        
+        <div id="heatmapYearSelector" style="margin-top: 12px;">
+            <label for="heatmapYear"><strong>Year:</strong></label>
+            <select id="heatmapYear" style="width: 100%; padding: 8px; margin-top: 6px; background: rgba(30, 41, 59, 0.8); color: white; border: 1px solid rgba(71, 85, 105, 0.3); border-radius: 5px;">
+                <option value="2000">2000</option>
+                <option value="2001">2001</option>
+                <option value="2002">2002</option>
+                <option value="2003">2003</option>
+                <option value="2004">2004</option>
+                <option value="2005">2005</option>
+                <option value="2006">2006</option>
+                <option value="2007">2007</option>
+                <option value="2008">2008</option>
+                <option value="2009">2009</option>
+                <option value="2010">2010</option>
+                <option value="2011">2011</option>
+                <option value="2012">2012</option>
+                <option value="2013">2013</option>
+                <option value="2014">2014</option>
+                <option value="2015">2015</option>
+                <option value="2016">2016</option>
+                <option value="2017">2017</option>
+                <option value="2018">2018</option>
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024*</option>
+                <option value="2025" selected>2025*</option>
+                <option value="2026" style="color: #00ffff; font-weight: bold;">2026 [AI]</option>
+                <option value="2027" style="color: #00ffff; font-weight: bold;">2027 [AI]</option>
+                <option value="2028" style="color: #00ffff; font-weight: bold;">2028 [AI]</option>
+                <option value="2029" style="color: #00ffff; font-weight: bold;">2029 [AI]</option>
+                <option value="2030" style="color: #00ffff; font-weight: bold;">2030 [AI]</option>
+                <option value="2031" style="color: #00ffff; font-weight: bold;">2031 [AI]</option>
+                <option value="2032" style="color: #00ffff; font-weight: bold;">2032 [AI]</option>
+                <option value="2033" style="color: #00ffff; font-weight: bold;">2033 [AI]</option>
+                <option value="2034" style="color: #00ffff; font-weight: bold;">2034 [AI]</option>
+                <option value="2035" style="color: #00ffff; font-weight: bold;">2035 [AI]</option>
+            </select>
+        </div>
+        
+        <button id="toggleHeatmapBtn" style="width: 100%; padding: 10px; margin-top: 12px; background: linear-gradient(135deg, #ff0000, #ffff00, #00ff00); color: black; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.3s;">
+            ✅ Show Heatmap
+        </button>
+        
+        <div id="heatmapLegend" style="margin-top: 12px; padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 5px; text-align: center; font-size: 11px; color: #94a3b8; display: none;">
+            <div style="margin-bottom: 6px; color: #ff0000;">🔴 High</div>
+            <div style="margin-bottom: 6px; color: #ffff00;">🟡 Medium</div>
+            <div style="color: #00ff00;">🟢 Low</div>
+        </div>
+        
+        <div id="governorateValuesList" style="display: none; margin-top: 12px; padding: 8px; background: rgba(0, 100, 150, 0.15); border-radius: 5px; max-height: 150px; overflow-y: auto; font-size: 10px;"></div>
+        
+        <div id="populationInfoPanel" style="display: none; margin-top: 12px; padding: 10px; background: rgba(0, 150, 255, 0.08); border: 1px solid rgba(0, 150, 255, 0.25); border-radius: 6px; font-size: 11px;"></div>
+        
+        <div id="heatmapComparisonStats" style="display: none; margin-top: 12px; padding: 10px; background: rgba(71, 85, 105, 0.15); border: 1px solid rgba(71, 85, 105, 0.25); border-radius: 6px; font-size: 11px; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+    
+    <div id="governorateValuesList-top" style="position: fixed; top: 0; left: 0; right: 0; width: 100%; height: auto; max-height: none; display: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; gap: 12px; padding: 12px 20px; background: rgba(10, 15, 30, 0.4); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(0, 255, 255, 0.2); z-index: 2000; margin: 0; border: none; border-radius: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+    </div>
+    
+    <script src="translations.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

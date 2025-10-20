@@ -1873,107 +1873,8 @@ viewer.cesiumWidget.canvas.addEventListener('click', (e) => {
     updateMapVisualization(energyYearSelect.value);
 
     // ===== CAROUSEL FUNCTIONALITY =====
-    const carousel = document.getElementById('vizCarousel');
-    const carouselTrack = document.querySelector('.carousel-track');
-    const carouselBtnPrev = document.getElementById('carouselPrev');
-    const carouselBtnNext = document.getElementById('carouselNext');
-    const dotsContainer = document.querySelector('.carousel-dots');
-    
-    let currentSlide = 0;
-    const totalSlides = 4;
-    let autoPlayInterval;
-    let dots = [];
-    
-    // Initialize dots
-    if (dotsContainer) {
-        for (let i = 0; i < totalSlides; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
-            dot.setAttribute('data-slide', i);
-            dotsContainer.appendChild(dot);
-            dots.push(dot);
-        }
-    }
-    
-    function updateCarouselPosition() {
-        const offset = -currentSlide * 100;
-        carouselTrack.style.transform = `translateX(${offset}%)`;
-        
-        // Update dots
-        dots.forEach((dot, index) => {
-            if (index === currentSlide) {
-                dot.classList.add('active');
-            } else {
-                dot.classList.remove('active');
-            }
-        });
-    }
-    
-    function nextSlide() {
-        currentSlide = (currentSlide + 1) % totalSlides;
-        updateCarouselPosition();
-        resetAutoPlay();
-    }
-    
-    function prevSlide() {
-        currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
-        updateCarouselPosition();
-        resetAutoPlay();
-    }
-    
-    function goToSlide(index) {
-        currentSlide = index;
-        updateCarouselPosition();
-        resetAutoPlay();
-    }
-    
-    function startAutoPlay() {
-        autoPlayInterval = setInterval(() => {
-            nextSlide();
-        }, 5000); // Change slide every 5 seconds
-    }
-    
-    function resetAutoPlay() {
-        clearInterval(autoPlayInterval);
-        startAutoPlay();
-    }
-    
-    // Event listeners - with null checks
-    if (carouselBtnNext) carouselBtnNext.addEventListener('click', nextSlide);
-    if (carouselBtnPrev) carouselBtnPrev.addEventListener('click', prevSlide);
-    
-    if (dots) {
-        dots.forEach(dot => {
-            dot.addEventListener('click', (e) => {
-                const slideIndex = parseInt(e.target.getAttribute('data-slide'));
-                goToSlide(slideIndex);
-            });
-        });
-    }
-    
-    // Start auto-play on load
-    startAutoPlay();
-    
-    // Pause on hover
-    if (carousel) {
-        carousel.addEventListener('mouseenter', () => {
-            clearInterval(autoPlayInterval);
-        });
-        
-        carousel.addEventListener('mouseleave', () => {
-            startAutoPlay();
-        });
-    }
-    
-    // Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight') nextSlide();
-        if (e.key === 'ArrowLeft') prevSlide();
-    });
-    
-    // Initialize carousel on page load
-    updateCarouselPosition();
-    console.log('✓ Carousel initialized');
+    // Carousel removed - using heatmap panel instead
+    console.log('✓ Heatmap panel initialized');
 
     // ============ HEATMAP VISUALIZATION ============
     console.log('🔥 CHECKPOINT: About to initialize heatmap...');
@@ -2154,8 +2055,12 @@ viewer.cesiumWidget.canvas.addEventListener('click', (e) => {
         
         // Get selected countries
         const selectedCountries = [];
-        document.querySelectorAll('#countryMultiSelect input[type="checkbox"]:checked').forEach(checkbox => {
-            selectedCountries.push(checkbox.getAttribute('data-country'));
+        const countryCheckboxes = ['tunisiaCheck', 'algeriaCheck', 'moroccoCheck', 'libyaCheck'];
+        countryCheckboxes.forEach(id => {
+            const checkbox = document.getElementById(id);
+            if (checkbox && checkbox.checked) {
+                selectedCountries.push(checkbox.getAttribute('data-country'));
+            }
         });
         
         if (selectedCountries.length === 0) {
@@ -2670,6 +2575,20 @@ viewer.cesiumWidget.canvas.addEventListener('click', (e) => {
             }
         });
     }
+
+    // Country checkbox change handlers
+    const countryCheckboxIds = ['tunisiaCheck', 'algeriaCheck', 'moroccoCheck', 'libyaCheck'];
+    countryCheckboxIds.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', () => {
+                console.log(`Country checkbox ${id} changed`);
+                if (heatmapActive) {
+                    generateHeatmap(metricSelect.value);
+                }
+            });
+        }
+    });
 
     if (heatmapOpacitySlider && heatmapOpacityValue) {
         heatmapOpacitySlider.addEventListener('input', () => {
